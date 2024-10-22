@@ -56,11 +56,11 @@
     const ctx = canvas.getContext('2d');
 
     const backgroundImage = new Image();
-    backgroundImage.src = 'clock.png';
+    backgroundImage.src = 'images/clock.png'; // Updated path
     const numberImages = {};
     for (let i = 0; i <= 9; i++) {
         const img = new Image();
-        img.src = `${i}.png`;
+        img.src = `images/${i}.png`; // Updated path
         numberImages[i] = img;
     }
 
