@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown to Video</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .content-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 16 / 9;
+        }
+
+        #myCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+    </style>
+    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
+    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+    <script src="https://player.live-video.net/1.5.0/amazon-ivs-videojs-tech.min.js"></script>
+</head>
+<body>
+
+<div class="content-container">
+    <canvas id="myCanvas" width="800" height="450"></canvas>
+    <div id="video-container">
+        <video id="amazon-ivs-videojs" class="video-js vjs-16-9 vjs-big-play-centered" preload="none" controls playsinline></video>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const backgroundImage = new Image();
+    backgroundImage.src = 'clock.png';
+    const numberImages = {};
+    for (let i = 0; i <= 9; i++) {
+        const img = new Image();
+        img.src = `${i}.png`;
+        numberImages[i] = img;
+    }
+
+    const targetDate = new Date('2024-10-25T21:03:00'); // Set your target date and time
+
+    function calculateTimeDifference() {
+        const now = new Date();
+        const diff = targetDate - now;
+
+        if (diff <= 0) {
+            switchToVideo(); // If countdown has passed, show the video immediately
+            return null;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        return { days, hours, mins, seconds };
+    }
+
+    function updateDisplay(time) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+
+        const timeStrings = [
+            String(time.days).padStart(2, '0'),
+            String(time.hours).padStart(2, '0'),
+            String(time.mins).padStart(2, '0'),
+            String(time.seconds).padStart(2, '0')
+        ];
+
+        const positions = [
+            { x: 200, y: 220 }, { x: 235, y: 220 }, // Days
+            { x: 300, y: 220 }, { x: 335, y: 220 }, // Hours
+            { x: 400, y: 220 }, { x: 435, y: 220 }, // Minutes
+            { x: 500, y: 220 }, { x: 535, y: 220 }  // Seconds
+        ];
+
+        timeStrings.forEach((timeString, index) => {
+            for (let charIndex = 0; charIndex < timeString.length; charIndex++) {
+                const char = timeString[charIndex];
+                const posX = positions[index * 2 + charIndex].x;
+                const posY = positions[index * 2 + charIndex].y;
+                ctx.drawImage(numberImages[char], posX, posY, 30, 75);
+            }
+        });
+
+        // Apply flip animation only to the last seconds digit
+        animateFlipEffect(time.seconds);
+    }
+
+    function startCountdown() {
+        let prevSeconds = null;  // Keep track of previous seconds to detect change
+
+        const countdownInterval = setInterval(() => {
+            const time = calculateTimeDifference();
+            if (!time) {
+                clearInterval(countdownInterval);
+                return;
+            }
+
+            // Update display only if the seconds have changed
+            if (time.seconds !== prevSeconds) {
+                updateDisplay(time);
+                prevSeconds = time.seconds;  // Update prevSeconds to track the change
+            }
+        }, 1000);
+    }
+
+    function switchToVideo() {
+        canvas.style.display = 'none';
+        document.getElementById('video-container').style.display = 'block';
+
+        registerIVSTech(videojs);
+        const player = videojs('amazon-ivs-videojs', {
+            techOrder: ["AmazonIVS"],
+            poster: 'https://rivurliveimages.azureedge.net/images/ca827e73-d084-4247-9cbd-9dd428827840.png'
+        });
+
+        player.src({
+            type: 'application/x-mpegURL',
+            src: 'https://f70077dbc771.us-east-1.playback.live-video.net/api/video/v1/us-east-1.654654610760.channel.XNAkMCinOGsO.m3u8'
+        });
+
+        player.ready(() => player.play());
+    }
+
+    function animateFlipEffect(seconds) {
+        const animationDuration = 50; // 50ms flip animation
+        let startTime = null;
+
+        function flip(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+
+            // Scale from 1 to a minimum of 0.2 to avoid complete shrinking
+            const progress = elapsed / animationDuration;
+            const scaleY = Math.max(0.2, Math.abs(Math.cos(progress * Math.PI))); // Use cosine for smooth flipping
+
+            // Save the context before applying any transformations
+            ctx.save();
+
+            // Apply flip animation to the seconds (last digit)
+            const digitToFlipIndex = 7; // The last digit (second unit)
+            const posX = 535; // X position of the last seconds digit
+            const posY = 220; // Y position of the last seconds digit
+
+            // Clear the specific area of the digit
+            ctx.clearRect(posX, posY, 30, 75);
+
+            // Fix the background source coordinates
+            const offsetX = 0; // No horizontal adjustment needed
+            const offsetY = -30; // Adjusted further by -30 to pull from a lower portion of the background
+
+            // Redraw the exact portion of the background behind the digit
+            ctx.drawImage(
+                backgroundImage,            // Image source
+                posX, posY - offsetY,       // Source x, y from the background image (adjusted lower)
+                30, 75,                     // Width and height to pull from the background image
+                posX, posY,                 // Destination x, y on the canvas
+                30, 75                      // Width and height on the canvas
+            );
+
+            // Apply the flip to the specific digit only
+            ctx.translate(posX + 15, posY + 37.5); // Move to the center of the digit
+            ctx.scale(1, scaleY); // Apply vertical scale to create flip effect
+            ctx.translate(-(posX + 15), -(posY + 37.5)); // Move back after scaling
+
+            // Draw the digit being flipped with the scaled transformation
+            ctx.drawImage(numberImages[seconds % 10], posX, posY, 30, 75);
+
+            // Restore the context after the transformations
+            ctx.restore();
+
+            if (elapsed < animationDuration) {
+                requestAnimationFrame(flip); // Continue the animation
+            } else {
+                // Ensure the final number is restored to full size (scaleY = 1)
+                ctx.save();
+                ctx.clearRect(posX, posY, 30, 75); // Clear the flipped number area
+                ctx.drawImage(
+                    backgroundImage, 
+                    posX, posY - offsetY,     // Source x, y from the background image (adjusted lower)
+                    30, 75,                   // Width and height to pull from the background image
+                    posX, posY,               // Destination x, y on the canvas
+                    30, 75                    // Width and height on the canvas
+                ); 
+                ctx.drawImage(numberImages[seconds % 10], posX, posY, 30, 75); // Draw the new number at full size
+                ctx.restore();
+            }
+        }
+
+        requestAnimationFrame(flip); // Start the animation
+    }
+
+    backgroundImage.onload = () => {
+        const time = calculateTimeDifference();
+        if (time) {
+            updateDisplay(time);
+            startCountdown();
+        }
+    };
+</script>
+
+</body>
+</html>
