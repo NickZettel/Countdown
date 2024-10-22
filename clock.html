@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Countdown to Video</title>
+    <title>Current Time Clock with Flip Animation</title>
     <style>
         body {
             margin: 0;
@@ -28,27 +28,12 @@
             width: 100%;
             height: 100%;
         }
-
-        #video-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-        }
     </style>
-    <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet">
-    <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-    <script src="https://player.live-video.net/1.5.0/amazon-ivs-videojs-tech.min.js"></script>
 </head>
 <body>
 
 <div class="content-container">
     <canvas id="myCanvas" width="800" height="450"></canvas>
-    <div id="video-container">
-        <video id="amazon-ivs-videojs" class="video-js vjs-16-9 vjs-big-play-centered" preload="none" controls playsinline></video>
-    </div>
 </div>
 
 <script>
@@ -56,31 +41,23 @@
     const ctx = canvas.getContext('2d');
 
     const backgroundImage = new Image();
-    backgroundImage.src = 'images/clock.png'; // Updated path
+    backgroundImage.src = 'images/clock.png'; // Updated path for your background image
     const numberImages = {};
     for (let i = 0; i <= 9; i++) {
         const img = new Image();
-        img.src = `images/${i}.png`; // Updated path
+        img.src = `images/${i}.png`; // Updated path for your number images
         numberImages[i] = img;
     }
 
-    const targetDate = new Date('2024-10-21T21:50:00'); // Set your target date and time
-
-    function calculateTimeDifference() {
+    function getCurrentTime() {
         const now = new Date();
-        const diff = targetDate - now;
 
-        if (diff <= 0) {
-            switchToVideo(); // If countdown has passed, show the video immediately
-            return null;
-        }
+        const days = now.getDate();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
 
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        return { days, hours, mins, seconds };
+        return { days, hours, minutes, seconds };
     }
 
     function updateDisplay(time) {
@@ -90,7 +67,7 @@
         const timeStrings = [
             String(time.days).padStart(2, '0'),
             String(time.hours).padStart(2, '0'),
-            String(time.mins).padStart(2, '0'),
+            String(time.minutes).padStart(2, '0'),
             String(time.seconds).padStart(2, '0')
         ];
 
@@ -114,42 +91,6 @@
         animateFlipEffect(time.seconds);
     }
 
-    function startCountdown() {
-        let prevSeconds = null;  // Keep track of previous seconds to detect change
-
-        const countdownInterval = setInterval(() => {
-            const time = calculateTimeDifference();
-            if (!time) {
-                clearInterval(countdownInterval);
-                return;
-            }
-
-            // Update display only if the seconds have changed
-            if (time.seconds !== prevSeconds) {
-                updateDisplay(time);
-                prevSeconds = time.seconds;  // Update prevSeconds to track the change
-            }
-        }, 1000);
-    }
-
-    function switchToVideo() {
-        canvas.style.display = 'none';
-        document.getElementById('video-container').style.display = 'block';
-
-        registerIVSTech(videojs);
-        const player = videojs('amazon-ivs-videojs', {
-            techOrder: ["AmazonIVS"],
-            poster: 'https://rivurliveimages.azureedge.net/images/ca827e73-d084-4247-9cbd-9dd428827840.png'
-        });
-
-        player.src({
-            type: 'application/x-mpegURL',
-            src: 'https://f70077dbc771.us-east-1.playback.live-video.net/api/video/v1/us-east-1.654654610760.channel.XNAkMCinOGsO.m3u8'
-        });
-
-        player.ready(() => player.play());
-    }
-
     function animateFlipEffect(seconds) {
         const animationDuration = 50; // 50ms flip animation
         let startTime = null;
@@ -166,7 +107,7 @@
             ctx.save();
 
             // Apply flip animation to the seconds (last digit)
-            const digitToFlipIndex = 7; // The last digit (second unit)
+            const digitToFlipIndex = 7; // The last digit (seconds unit)
             const posX = 535; // X position of the last seconds digit
             const posY = 220; // Y position of the last seconds digit
 
@@ -218,12 +159,22 @@
         requestAnimationFrame(flip); // Start the animation
     }
 
+    function startClock() {
+        let prevSeconds = null;
+
+        setInterval(() => {
+            const time = getCurrentTime();
+            if (time.seconds !== prevSeconds) {
+                updateDisplay(time);
+                prevSeconds = time.seconds;
+            }
+        }, 1000);
+    }
+
     backgroundImage.onload = () => {
-        const time = calculateTimeDifference();
-        if (time) {
-            updateDisplay(time);
-            startCountdown();
-        }
+        const time = getCurrentTime();
+        updateDisplay(time);
+        startClock();
     };
 </script>
 
