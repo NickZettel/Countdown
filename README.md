@@ -6,8 +6,6 @@ Set a targetDate sometime in the future.
 
 Update switchToVideo() with your video information/ any code that should run when the countdown reaches zero.
 
-If the page loads and the countdown is already passed, the countdown will not show -the video feed will appear instantly.
-
 See Clock branch for a regular clock version.
 
 ![Countdown Preview](https://github.com/NickZettel/Countdown/raw/main/preview.gif)
